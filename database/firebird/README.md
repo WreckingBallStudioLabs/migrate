@@ -15,4 +15,4 @@
 
 If you need a `migrate` CLI that supports Firebird, you'll need need to build it yourself. There are also no guarantees that the integration will work since we're not testing with Firebird.
 
-For more info, see: https://github.com/golang-migrate/migrate/issues/49#issuecomment-487193672
+For more info, see: https://github.com/WreckingBallStudioLabs/migrate/issues/49#issuecomment-487193672
