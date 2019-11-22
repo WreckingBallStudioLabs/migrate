@@ -8,6 +8,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/client"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -26,6 +28,39 @@ type s3Driver struct {
 	migrations *source.Migrations
 }
 
+func initDriver(session client.ConfigProvider, path *url.URL) s3Driver {
+	return s3Driver{
+		bucket:     path.Host,
+		prefix:     getPrefix(path.Path),
+		s3client:   s3.New(session),
+		migrations: source.NewMigrations(),
+	}
+}
+
+// WithInstance initializes the s3 source with an an existing AWS Session.
+// Important for accessing s3 buckets that are not public (most cases)
+func WithInstance(sess client.ConfigProvider, folder string) (source.Driver, error) {
+	u, err := url.Parse(folder)
+	if err != nil {
+		return nil, err
+	}
+	driver := initDriver(sess, u)
+	err = driver.loadMigrations()
+	if err != nil {
+		return nil, err
+	}
+	return &driver, nil
+}
+
+// s3 prefix must be empty string if root of bucket
+func getPrefix(path string) string {
+	s := strings.Trim(path, "/")
+	if len(s) > 0 {
+		return s + "/"
+	}
+	return s
+}
+
 func (s *s3Driver) Open(folder string) (source.Driver, error) {
 	u, err := url.Parse(folder)
 	if err != nil {
@@ -35,12 +70,7 @@ func (s *s3Driver) Open(folder string) (source.Driver, error) {
 	if err != nil {
 		return nil, err
 	}
-	driver := s3Driver{
-		bucket:     u.Host,
-		prefix:     strings.Trim(u.Path, "/") + "/",
-		s3client:   s3.New(sess),
-		migrations: source.NewMigrations(),
-	}
+	driver := initDriver(sess, u)
 	err = driver.loadMigrations()
 	if err != nil {
 		return nil, err
